@@ -324,7 +324,7 @@ def generate_advanced_suggestion(results, surf_analysis, color_analysis, break_p
 
     # 1. Quebra de Sequência Longa (Surf Max)
     if last_result_color == 'red' and current_streak >= surf_analysis['max_home_sequence'] and surf_analysis['max_home_sequence'] > 0 and current_streak >= 3:
-        bet_scores['away'] += 120 # Prioridade muito alta
+        bet_scores['away'] += 120
         reasons['away'].append(f"Sequência atual de Vermelho ({current_streak}x) atingiu ou superou o máximo histórico de surf ({surf_analysis['max_home_sequence']}x).")
         guarantees['away'].append(f"Surf Max Quebra: {last_result_color.capitalize()}")
     elif last_result_color == 'blue' and current_streak >= surf_analysis['max_away_sequence'] and surf_analysis['max_away_sequence'] > 0 and current_streak >= 3:
@@ -343,7 +343,7 @@ def generate_advanced_suggestion(results, surf_analysis, color_analysis, break_p
 
     # 2. Padrões 2x1 e 3x1 altamente recorrentes (Indica quebra)
     for pattern, count in break_patterns.items():
-        if count >= 3: # Limiar de recorrência
+        if count >= 3:
             if "2x1 (Red 🔴 Blue 🔵)" in pattern and last_result_color == 'red' and current_streak == 2:
                 bet_scores['away'] += 100
                 reasons['away'].append(f"Padrão 2x1 (🔴🔴🔵) altamente recorrente ({count}x).")
@@ -396,12 +396,12 @@ def generate_advanced_suggestion(results, surf_analysis, color_analysis, break_p
         guarantees['draw'].append("Empate Atrasado/Baixa Frequência")
     
     if len(results) >= 2:
-        if get_color(results[0]) == 'away' and get_color(results[1]) == 'home': # B R
+        if get_color(results[0]) == 'away' and get_color(results[1]) == 'home':
             if "Red-Blue-Draw (🔴🔵🟡)" in draw_specifics['draw_patterns']:
                 bet_scores['draw'] += 95
                 reasons['draw'].append(f"Padrão 🔴🔵🟡 detectado e recorrente.")
                 guarantees['draw'].append("Padrão 🔴🔵🟡")
-        elif get_color(results[0]) == 'home' and get_color(results[1]) == 'away': # R B
+        elif get_color(results[0]) == 'home' and get_color(results[1]) == 'away':
             if "Blue-Red-Draw (🔵🔴🟡)" in draw_specifics['draw_patterns']:
                 bet_scores['draw'] += 95
                 reasons['draw'].append(f"Padrão 🔵🔴🟡 detectado e recorrente.")
@@ -428,25 +428,18 @@ def generate_advanced_suggestion(results, surf_analysis, color_analysis, break_p
             
             # Padrão de Espelho
             if "Padrão Espelho" in pattern and len(results) >= 3:
-                # Se os 3 últimos resultados correspondem à parte final de um espelho (B B R)
-                # e o padrão é recorrente, sugere a cor inicial (R)
-                if get_color(results[0]) == get_color(results[1]) and get_color(results[0]) != get_color(results[2]):
-                    # Ex: se o padrão é R B B R, e os últimos foram B B R (results[0]=B, results[1]=B, results[2]=R)
-                    # então o próximo esperado é o espelho do primeiro, que é o 'away' do pattern.
-                    pattern_parts = pattern.split('(')[1].strip(')').split(' ')
-                    expected_first_color = pattern_parts[0].lower() # 'red'
-                    expected_second_color = pattern_parts[2].lower() # 'blue'
-                    
-                    # Se a sequência atual (reversed) corresponde ao final do padrão espelho
-                    # e o que esperamos é a primeira cor do padrão.
-                    if get_color(results[0]) == expected_second_color and \
-                       get_color(results[1]) == expected_second_color and \
-                       get_color(results[2]) == expected_first_color:
-                       
-                        if expected_first_color != 'yellow': # Não apostar em empate se o espelho sugere uma cor principal
-                            bet_scores[expected_first_color] += 85
-                            reasons[expected_first_color].append(f"Padrão Espelho ({pattern_parts[0]} {pattern_parts[1]} {pattern_parts[2]} {pattern_parts[3]}) recorrente ({count}x). Espera-se o retorno ao início do espelho.")
-                            guarantees[expected_first_color].append(pattern)
+                pattern_parts = pattern.split('(')[1].strip(')').split(' ')
+                expected_first_color = pattern_parts[0].lower()
+                expected_second_color = pattern_parts[2].lower()
+                
+                if get_color(results[0]) == expected_second_color and \
+                   get_color(results[1]) == expected_second_color and \
+                   get_color(results[2]) == expected_first_color:
+                   
+                    if expected_first_color != 'yellow':
+                        bet_scores[expected_first_color] += 85
+                        reasons[expected_first_color].append(f"Padrão Espelho ({pattern_parts[0]} {pattern_parts[1]} {pattern_parts[2]} {pattern_parts[3]}) recorrente ({count}x). Espera-se o retorno ao início do espelho.")
+                        guarantees[expected_first_color].append(pattern)
 
 
     # --- Nível 3: Sugestões de Confiança Média (Pontuação 40-70) ---
@@ -471,7 +464,7 @@ def generate_advanced_suggestion(results, surf_analysis, color_analysis, break_p
         if score > max_score:
             max_score = score
             best_bet_type = bet_type
-        elif score == max_score and best_bet_type == 'draw' and bet_type != 'draw': # Priorizar H/A sobre Draw
+        elif score == max_score and best_bet_type == 'draw' and bet_type != 'draw':
             best_bet_type = bet_type
 
     final_suggestion = "Manter observação."
@@ -554,7 +547,7 @@ def check_guarantee_status(suggested_bet_type, actual_result, guarantee_pattern)
 st.set_page_config(layout="wide", page_title="Football Studio Pro Analyzer")
 
 st.title("⚽ Football Studio Pro Analyzer")
-st.write("Sistema Avançado de Análise e Predição (v2.1 - Histórico Horizontal Corrigido)")
+st.write("Sistema Avançado de Análise e Predição (v2.2 - Histórico Horizontal Corrigido Definitivamente)")
 
 # --- Gerenciamento de Estado ---
 if 'results' not in st.session_state:
@@ -708,17 +701,18 @@ st.header(f"Histórico dos Últimos {NUM_HISTORY_TO_DISPLAY} Resultados")
 if st.session_state.results:
     history_to_display = st.session_state.results[:NUM_HISTORY_TO_DISPLAY]
     
-    # Criar uma lista de strings formatadas para o histórico
-    formatted_history = [f"{get_result_emoji(r)}{get_color_emoji(get_color(r))}" for r in history_to_display]
+    # Criar uma lista de strings de emojis
+    emojis_history = [f"{get_result_emoji(r)}{get_color_emoji(get_color(r))}" for r in history_to_display]
     
-    # Exibir em linhas de 9 resultados usando st.columns
-    for i in range(0, len(formatted_history), 9):
-        row_items = formatted_history[i:i+9]
-        cols = st.columns(len(row_items)) # Cria colunas dinamicamente para cada linha
-        for j, item in enumerate(row_items):
-            with cols[j]:
-                # Usar st.markdown com style para centralizar e garantir espaçamento
-                st.markdown(f"<div style='text-align: center; margin: 0 2px;'>{item}</div>", unsafe_allow_html=True)
+    # Dividir em linhas de 9 resultados e concatenar em uma única string por linha
+    rows_of_emojis = []
+    for i in range(0, len(emojis_history), 9):
+        # Concatena 9 emojis (ou menos para a última linha) com um pequeno espaço entre eles
+        rows_of_emojis.append(" ".join(emojis_history[i:i+9]))
+    
+    # Exibir cada linha como um único markdown
+    for row_string in rows_of_emojis:
+        st.markdown(f"<div style='display: flex; justify-content: flex-start; flex-wrap: nowrap; margin-bottom: 5px;'>{row_string}</div>", unsafe_allow_html=True)
     
     st.markdown("---")
     if st.button("Limpar Histórico Completo", type="secondary"):
