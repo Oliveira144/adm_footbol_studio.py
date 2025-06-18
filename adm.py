@@ -547,9 +547,11 @@ def check_guarantee_status(suggested_bet_type, actual_result, guarantee_pattern)
 st.set_page_config(layout="wide", page_title="Football Studio Pro Analyzer")
 
 st.title("⚽ Football Studio Pro Analyzer")
-st.write("Sistema Avançado de Análise e Predição (v2.2 - Histórico Horizontal Corrigido Definitivamente)")
+st.write("Sistema Avançado de Análise e Predição (v2.3 - Histórico e Persistência Reforçados)")
 
-# --- Gerenciamento de Estado ---
+# --- Gerenciamento de Estado (Initialização para garantir persistência) ---
+# A chave aqui é inicializar essas variáveis SOMENTE se elas não existirem.
+# Se elas existirem, o Streamlit as mantém entre as execuções.
 if 'results' not in st.session_state:
     st.session_state.results = []
 if 'analysis_data' not in st.session_state:
@@ -565,25 +567,33 @@ if 'last_suggestion_confidence' not in st.session_state:
 
 # --- Função para Adicionar Resultado ---
 def add_result(result_type):
+    # Verificar garantia ANTES de adicionar o novo resultado e recalcular tudo
+    # Isso garante que a garantia é verificada para a rodada anterior.
     if st.session_state.last_suggested_bet_type != 'none' and st.session_state.last_suggestion_confidence >= 70:
         if not check_guarantee_status(st.session_state.last_suggested_bet_type, result_type, st.session_state.last_guarantee_pattern):
             st.session_state.guarantee_failed = True
-            st.error(f"🚨 **ALERTA: A GARANTIA DO PADRÃO '{st.session_state.last_guarantee_pattern}' FALHOU na rodada anterior!**")
         else:
             st.session_state.guarantee_failed = False
     else:
         st.session_state.guarantee_failed = False
 
-
-    st.session_state.results.insert(0, result_type) 
-    st.session_state.results = st.session_state.results[:MAX_HISTORY_TO_STORE] 
+    st.session_state.results.insert(0, result_type) # Adiciona o novo resultado ao topo
+    st.session_state.results = st.session_state.results[:MAX_HISTORY_TO_STORE] # Limita o tamanho do histórico
+    
+    # Recalcula a análise com o novo histórico
     st.session_state.analysis_data = update_analysis(st.session_state.results)
     
+    # Atualiza a sugestão e garantia para a PRÓXIMA rodada
     current_suggestion_data = st.session_state.analysis_data['suggestion']
     st.session_state.last_suggested_bet_type = current_suggestion_data['bet_type']
     st.session_state.last_guarantee_pattern = current_suggestion_data['guarantee_pattern']
     st.session_state.last_suggestion_confidence = current_suggestion_data['confidence']
     
+    # st.experimental_rerun()  # Remover ou comentar esta linha se ela estiver causando reloads indesejados
+                               # Ela só é realmente necessária se você precisar de um refresh completo
+                               # que não acontece automaticamente com a atualização do session_state
+                               # na maioria dos casos de uso de botões.
+
 # --- Função para Limpar Histórico ---
 def clear_history():
     st.session_state.results = []
@@ -592,7 +602,7 @@ def clear_history():
     st.session_state.last_guarantee_pattern = "N/A"
     st.session_state.guarantee_failed = False
     st.session_state.last_suggestion_confidence = 0
-    st.experimental_rerun() 
+    st.experimental_rerun() # Aqui o rerun é intencional para resetar a interface completamente.
 
 # --- Layout ---
 st.header("Registrar Resultado")
@@ -698,21 +708,29 @@ st.markdown("---")
 
 # --- Histórico dos Últimos 100 Resultados (Horizontal) ---
 st.header(f"Histórico dos Últimos {NUM_HISTORY_TO_DISPLAY} Resultados")
+
+# Nova abordagem para o histórico horizontal
 if st.session_state.results:
     history_to_display = st.session_state.results[:NUM_HISTORY_TO_DISPLAY]
     
-    # Criar uma lista de strings de emojis
-    emojis_history = [f"{get_result_emoji(r)}{get_color_emoji(get_color(r))}" for r in history_to_display]
+    # Cria uma lista de emojis para exibição
+    emojis_to_render = [f"{get_result_emoji(r)}{get_color_emoji(get_color(r))}" for r in history_to_display]
     
-    # Dividir em linhas de 9 resultados e concatenar em uma única string por linha
-    rows_of_emojis = []
-    for i in range(0, len(emojis_history), 9):
-        # Concatena 9 emojis (ou menos para a última linha) com um pequeno espaço entre eles
-        rows_of_emojis.append(" ".join(emojis_history[i:i+9]))
+    # Usa st.columns para criar as "células" e adiciona cada emoji individualmente,
+    # mas garante 9 colunas e quebra para a próxima linha de colunas
+    num_cols_per_row = 9
     
-    # Exibir cada linha como um único markdown
-    for row_string in rows_of_emojis:
-        st.markdown(f"<div style='display: flex; justify-content: flex-start; flex-wrap: nowrap; margin-bottom: 5px;'>{row_string}</div>", unsafe_allow_html=True)
+    # Calcula quantas linhas de 9 teremos
+    num_rows = (len(emojis_to_render) + num_cols_per_row - 1) // num_cols_per_row
+
+    for r_idx in range(num_rows):
+        # Cria 9 colunas para cada linha
+        cols = st.columns(num_cols_per_row) 
+        for c_idx in range(num_cols_per_row):
+            current_emoji_index = r_idx * num_cols_per_row + c_idx
+            if current_emoji_index < len(emojis_to_render):
+                with cols[c_idx]:
+                    st.markdown(emojis_to_render[current_emoji_index])
     
     st.markdown("---")
     if st.button("Limpar Histórico Completo", type="secondary"):
